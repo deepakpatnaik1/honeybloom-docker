@@ -1,0 +1,44 @@
+# honeybloom-flux: FLUX inference + ReActor face swap
+# Base: vastai/comfy:v0.16.4-cuda-13.1-py312
+# Purpose: Production stills generation with identity LoRA and face swap
+#
+# NOT INCLUDED: Models (download at runtime via startup script)
+
+FROM vastai/comfy:v0.16.4-cuda-13.1-py312
+
+# Upgrade ComfyUI to latest
+WORKDIR /opt/workspace-internal/ComfyUI
+RUN git checkout master && git pull
+
+# Activate venv and install core dependencies
+RUN /venv/main/bin/pip install -r requirements.txt && \
+    /venv/main/bin/pip install numpy==1.26.4
+
+# Clone required custom nodes
+WORKDIR /opt/workspace-internal/ComfyUI/custom_nodes
+
+# KJNodes - utilities, SetShakkerLabsUnionControlNetType
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git
+
+# ReActor - face swap
+RUN git clone https://github.com/Gourieff/ComfyUI-ReActor.git
+
+# Install node dependencies
+RUN /venv/main/bin/pip install -r /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-ReActor/requirements.txt && \
+    /venv/main/bin/pip install onnxruntime-gpu
+
+# Apply NSFW patch to ReActor (line 451: bypass content filter)
+RUN sed -i '451s/.*/            if True:  # NSFW patch/' /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-ReActor/nodes.py
+
+# Create model directories
+RUN mkdir -p /opt/workspace-internal/ComfyUI/models/checkpoints \
+             /opt/workspace-internal/ComfyUI/models/loras \
+             /opt/workspace-internal/ComfyUI/models/controlnet \
+             /opt/workspace-internal/ComfyUI/models/upscale_models \
+             /opt/workspace-internal/ComfyUI/models/insightface \
+             /opt/workspace-internal/ComfyUI/models/facerestore_models
+
+WORKDIR /opt/workspace-internal/ComfyUI
+
+# Default: start ComfyUI on port 18188
+CMD ["/venv/main/bin/python", "main.py", "--listen", "0.0.0.0", "--port", "18188"]

@@ -1,0 +1,47 @@
+# honeybloom-wan: Wan video inference + training
+# Base: vastai/comfy:v0.16.4-cuda-13.1-py312
+# Purpose: Wan 2.2 video generation, animation, and LoRA training
+#
+# NOT INCLUDED: Models (download at runtime via startup script)
+
+FROM vastai/comfy:v0.16.4-cuda-13.1-py312
+
+# Upgrade ComfyUI to latest (native Wan 2.2 support requires v0.15.1+)
+WORKDIR /opt/workspace-internal/ComfyUI
+RUN git checkout master && git pull
+
+# Activate venv and install core dependencies
+RUN /venv/main/bin/pip install -r requirements.txt && \
+    /venv/main/bin/pip install numpy==1.26.4
+
+# Clone required custom nodes
+WORKDIR /opt/workspace-internal/ComfyUI/custom_nodes
+
+# WanVideoWrapper - Wan engine, model loading
+RUN git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git
+
+# SAM2 - segmentation for video
+RUN git clone https://github.com/kijai/ComfyUI-segment-anything-2.git
+
+# ControlNet Aux - DWPreprocessor, pose detection
+RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git
+
+# KJNodes - utilities, SetShakkerLabsUnionControlNetType
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git
+
+# Install node dependencies
+RUN /venv/main/bin/pip install -r /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper/requirements.txt && \
+    /venv/main/bin/pip install matplotlib scikit-image
+
+# Create model directories for Wan workflow
+RUN mkdir -p /opt/workspace-internal/ComfyUI/models/diffusion_models \
+             /opt/workspace-internal/ComfyUI/models/text_encoders \
+             /opt/workspace-internal/ComfyUI/models/vae \
+             /opt/workspace-internal/ComfyUI/models/clip_vision \
+             /opt/workspace-internal/ComfyUI/models/loras \
+             /opt/workspace-internal/ComfyUI/models/controlnet
+
+WORKDIR /opt/workspace-internal/ComfyUI
+
+# Default: start ComfyUI on port 18188
+CMD ["/venv/main/bin/python", "main.py", "--listen", "0.0.0.0", "--port", "18188"]
