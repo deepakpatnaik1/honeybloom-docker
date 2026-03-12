@@ -18,7 +18,7 @@ jobs:
         with:
           file: Dockerfile.honeybloom-flux
           push: true
-          tags: budaeytri/comfyui-flux:v1
+          tags: budaeytri/comfyui-flux:v2
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max

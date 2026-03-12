@@ -11,8 +11,7 @@ WORKDIR /opt/workspace-internal/ComfyUI
 RUN git checkout master && git pull
 
 # Activate venv and install core dependencies
-RUN /venv/main/bin/pip install -r requirements.txt && \
-    /venv/main/bin/pip install numpy==1.26.4
+RUN /venv/main/bin/pip install -r requirements.txt
 
 # Clone required custom nodes
 WORKDIR /opt/workspace-internal/ComfyUI/custom_nodes
@@ -23,9 +22,10 @@ RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git
 # ReActor - face swap
 RUN git clone https://github.com/Gourieff/ComfyUI-ReActor.git
 
-# Install node dependencies
+# Install node dependencies + pin numpy AFTER onnxruntime-gpu (prevents version override)
 RUN /venv/main/bin/pip install -r /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-ReActor/requirements.txt && \
-    /venv/main/bin/pip install onnxruntime-gpu
+    /venv/main/bin/pip install onnxruntime-gpu && \
+    /venv/main/bin/pip install numpy==1.26.4
 
 # Apply NSFW patch to ReActor (line 451: bypass content filter)
 RUN sed -i '451s/.*/            if True:  # NSFW patch/' /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-ReActor/nodes.py
