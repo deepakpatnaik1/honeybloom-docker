@@ -6,9 +6,9 @@
 
 FROM vastai/comfy:v0.16.4-cuda-13.1-py312
 
-# Upgrade ComfyUI to latest
+# Pin ComfyUI to v0.16.4 (CUDA 12.4-12.6 compatible, JOB006 known-good)
 WORKDIR /opt/workspace-internal/ComfyUI
-RUN git checkout master && git pull
+RUN git checkout a7a6335be538f55faa2abf7404c9b8e970847d1f
 
 # Activate venv and install core dependencies
 RUN /venv/main/bin/pip install -r requirements.txt && \
