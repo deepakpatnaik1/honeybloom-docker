@@ -2,7 +2,7 @@
 # Base: vastai/comfy:v0.16.4-cuda-13.1-py312
 # Purpose: Wan 2.2 video generation, animation (V2V), and LoRA training
 #
-# v3: Pin PyTorch cu124 (driver >= 550.54), pin all custom node commits, cuda-compat-12-4
+# v3: Pin PyTorch 2.9.1+cu126 (driver >= 560.28), pin all custom node commits, cuda-compat-12-6
 # v2: Added WanAnimatePreprocess, VHS, onnxruntime-gpu, imageio-ffmpeg, detection/sam2 dirs
 # v1: WanVideoWrapper, SAM2, KJNodes, ControlNet Aux
 #
@@ -15,14 +15,14 @@ WORKDIR /opt/workspace-internal/ComfyUI
 RUN git checkout a7a6335be538f55faa2abf7404c9b8e970847d1f
 
 # Install cuda-compat for datacenter GPUs (belt-and-suspenders)
-RUN apt-get update && apt-get install -y cuda-compat-12-4 && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y cuda-compat-12-6 && rm -rf /var/lib/apt/lists/*
 
 # Install core dependencies from ComfyUI requirements first
 RUN /venv/main/bin/pip install -r requirements.txt
 
-# Pin PyTorch to cu124 AFTER requirements.txt (so our CUDA pin wins)
-# Drops minimum driver from 590.44 (CUDA 13.1) to 550.54 (CUDA 12.4)
-RUN /venv/main/bin/pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu124
+# Pin PyTorch 2.9.1+cu126 AFTER requirements.txt (so our CUDA pin wins)
+# Drops minimum driver from 590.44 (CUDA 13.1) to 560.28 (CUDA 12.6)
+RUN /venv/main/bin/pip install torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1 --index-url https://download.pytorch.org/whl/cu126
 
 # Clone and pin custom nodes to known-good commits (captured during v2 quick-verify)
 WORKDIR /opt/workspace-internal/ComfyUI/custom_nodes
