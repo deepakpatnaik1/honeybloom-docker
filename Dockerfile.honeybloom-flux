@@ -21,10 +21,12 @@ RUN /venv/main/bin/pip install torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.
 WORKDIR /opt/workspace-internal/ComfyUI/custom_nodes
 
 # KJNodes - utilities, SetShakkerLabsUnionControlNetType
-RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
+    cd ComfyUI-KJNodes && git checkout 3fba409e0e77cdf04cda88433da35290c2da58bc
 
-# ReActor - face swap
-RUN git clone https://github.com/Gourieff/ComfyUI-ReActor.git
+# ReActor - face swap (line 451 NSFW check confirmed at this commit)
+RUN git clone https://github.com/Gourieff/ComfyUI-ReActor.git && \
+    cd ComfyUI-ReActor && git checkout a2a61fd5e7a6ba546eff848b0783b5fb8bada2c0
 
 # Install node dependencies + pin numpy AFTER onnxruntime-gpu (prevents version override)
 RUN /venv/main/bin/pip install -r /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-ReActor/requirements.txt && \
