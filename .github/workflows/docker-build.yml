@@ -36,7 +36,7 @@ jobs:
         with:
           file: Dockerfile.honeybloom-wan
           push: true
-          tags: budaeytri/comfyui-wan:v2
+          tags: budaeytri/comfyui-wan:v3
           platforms: linux/amd64
           cache-from: type=gha
           cache-to: type=gha,mode=max

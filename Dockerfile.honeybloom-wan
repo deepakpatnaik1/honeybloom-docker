@@ -2,6 +2,7 @@
 # Base: vastai/comfy:v0.16.4-cuda-13.1-py312
 # Purpose: Wan 2.2 video generation, animation (V2V), and LoRA training
 #
+# v3: Pin PyTorch cu124 (driver >= 550.54), pin all custom node commits, cuda-compat-12-4
 # v2: Added WanAnimatePreprocess, VHS, onnxruntime-gpu, imageio-ffmpeg, detection/sam2 dirs
 # v1: WanVideoWrapper, SAM2, KJNodes, ControlNet Aux
 #
@@ -9,39 +10,48 @@
 
 FROM vastai/comfy:v0.16.4-cuda-13.1-py312
 
-# Pin ComfyUI to v0.16.4 (CUDA 12.4-12.6 compatible, JOB006 known-good)
+# Pin ComfyUI to v0.16.4 (JOB006 known-good)
 WORKDIR /opt/workspace-internal/ComfyUI
 RUN git checkout a7a6335be538f55faa2abf7404c9b8e970847d1f
 
-# Activate venv and install core dependencies
-RUN /venv/main/bin/pip install -r requirements.txt && \
-    /venv/main/bin/pip install numpy==1.26.4
+# Install cuda-compat for datacenter GPUs (belt-and-suspenders)
+RUN apt-get update && apt-get install -y cuda-compat-12-4 && rm -rf /var/lib/apt/lists/*
 
-# Clone required custom nodes
+# Install core dependencies from ComfyUI requirements first
+RUN /venv/main/bin/pip install -r requirements.txt
+
+# Pin PyTorch to cu124 AFTER requirements.txt (so our CUDA pin wins)
+# Drops minimum driver from 590.44 (CUDA 13.1) to 550.54 (CUDA 12.4)
+RUN /venv/main/bin/pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu124
+
+# Clone and pin custom nodes to known-good commits (captured during v2 quick-verify)
 WORKDIR /opt/workspace-internal/ComfyUI/custom_nodes
 
-# WanVideoWrapper - Wan engine, model loading
-RUN git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git
+RUN git clone https://github.com/kijai/ComfyUI-WanVideoWrapper.git && \
+    cd ComfyUI-WanVideoWrapper && git checkout df8f3e49daaad117cf3090cc916c83f3d001494c
 
-# SAM2 - segmentation for video
-RUN git clone https://github.com/kijai/ComfyUI-segment-anything-2.git
+RUN git clone https://github.com/kijai/ComfyUI-segment-anything-2.git && \
+    cd ComfyUI-segment-anything-2 && git checkout 0c35fff5f382803e2310103357b5e985f5437f32
 
-# ControlNet Aux - DWPreprocessor, pose detection
-RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git
+RUN git clone https://github.com/Fannovel16/comfyui_controlnet_aux.git && \
+    cd comfyui_controlnet_aux && git checkout 95a13e2e5d8f8ae57583fbebb0be1f670889858b
 
-# KJNodes - utilities, SetShakkerLabsUnionControlNetType
-RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git
+RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
+    cd ComfyUI-KJNodes && git checkout 3fba409e0e77cdf04cda88433da35290c2da58bc
 
-# v2: WanAnimatePreprocess - pose/face detection for V2V animate
-RUN git clone https://github.com/kijai/ComfyUI-WanAnimatePreprocess.git
+RUN git clone https://github.com/kijai/ComfyUI-WanAnimatePreprocess.git && \
+    cd ComfyUI-WanAnimatePreprocess && git checkout 1a35b81a418bbba093356ad19b19bf2a76a24f4e
 
-# v2: VideoHelperSuite (VHS) - video load/combine for V2V workflows
-RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git
+RUN git clone https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite.git && \
+    cd ComfyUI-VideoHelperSuite && git checkout 993082e4f2473bf4acaf06f51e33877a7eb38960
 
 # Install node dependencies
 RUN /venv/main/bin/pip install -r /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-WanVideoWrapper/requirements.txt && \
     /venv/main/bin/pip install matplotlib scikit-image && \
     /venv/main/bin/pip install onnxruntime-gpu imageio-ffmpeg
+
+# Pin numpy LAST so it holds after all other installs
+RUN /venv/main/bin/pip install numpy==1.26.4
 
 # Create model directories for Wan workflow
 RUN mkdir -p /opt/workspace-internal/ComfyUI/models/diffusion_models \
