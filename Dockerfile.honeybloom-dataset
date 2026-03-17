@@ -10,9 +10,12 @@ FROM vastai/comfy:v0.16.4-cuda-13.1-py312
 WORKDIR /opt/workspace-internal/ComfyUI
 RUN git checkout a7a6335be538f55faa2abf7404c9b8e970847d1f
 
-# Activate venv and install core dependencies
-RUN /venv/main/bin/pip install -r requirements.txt && \
-    /venv/main/bin/pip install numpy==1.26.4
+# Install core dependencies from ComfyUI requirements first
+RUN /venv/main/bin/pip install -r requirements.txt
+
+# Pin PyTorch 2.9.1+cu126 AFTER requirements.txt (so our CUDA pin wins)
+# Drops minimum driver from 590.44 (CUDA 13.1) to 560.28 (CUDA 12.6)
+RUN /venv/main/bin/pip install torch==2.9.1 torchvision==0.24.1 torchaudio==2.9.1 --index-url https://download.pytorch.org/whl/cu126
 
 # Clone required custom nodes
 WORKDIR /opt/workspace-internal/ComfyUI/custom_nodes
@@ -21,6 +24,9 @@ WORKDIR /opt/workspace-internal/ComfyUI/custom_nodes
 RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git
 
 # NOTE: TextEncodeQwenImageEditPlus is NATIVE to ComfyUI core - no custom repo needed
+
+# Pin numpy LAST so it holds after all other installs
+RUN /venv/main/bin/pip install numpy==1.26.4
 
 # Create model directories
 RUN mkdir -p /opt/workspace-internal/ComfyUI/models/checkpoints \
