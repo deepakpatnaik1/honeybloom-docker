@@ -28,13 +28,13 @@ RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
 RUN git clone https://github.com/Gourieff/ComfyUI-ReActor.git && \
     cd ComfyUI-ReActor && git checkout a2a61fd5e7a6ba546eff848b0783b5fb8bada2c0
 
-# Install node dependencies + pin numpy AFTER onnxruntime-gpu (prevents version override)
+# Install node dependencies
 RUN /venv/main/bin/pip install -r /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-ReActor/requirements.txt && \
-    /venv/main/bin/pip install onnxruntime-gpu && \
-    /venv/main/bin/pip install numpy==1.26.4
+    /venv/main/bin/pip install onnxruntime-gpu
 
-# Apply NSFW patch to ReActor (line 451: bypass content filter)
-RUN sed -i '451s/.*/            if True:  # NSFW patch/' /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-ReActor/nodes.py
+# NSFW patch: content-based match. If no match found, NSFW filter stays active (28KB black outputs).
+# Pinned to commit a2a61fd5 where this line exists.
+RUN sed -i 's/if not sfw\.nsfw_image(img_byte_arr, NSFWDET_MODEL_PATH):/if True:  # NSFW patch/' /opt/workspace-internal/ComfyUI/custom_nodes/ComfyUI-ReActor/nodes.py
 
 # Create model directories
 RUN mkdir -p /opt/workspace-internal/ComfyUI/models/checkpoints \

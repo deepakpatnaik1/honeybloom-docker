@@ -26,9 +26,6 @@ RUN git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
 
 # NOTE: TextEncodeQwenImageEditPlus is NATIVE to ComfyUI core - no custom repo needed
 
-# Pin numpy LAST so it holds after all other installs
-RUN /venv/main/bin/pip install numpy==1.26.4
-
 # Create model directories
 RUN mkdir -p /opt/workspace-internal/ComfyUI/models/checkpoints \
              /opt/workspace-internal/ComfyUI/models/clip \

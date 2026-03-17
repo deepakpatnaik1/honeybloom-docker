@@ -50,9 +50,6 @@ RUN /venv/main/bin/pip install -r /opt/workspace-internal/ComfyUI/custom_nodes/C
     /venv/main/bin/pip install matplotlib scikit-image && \
     /venv/main/bin/pip install onnxruntime-gpu imageio-ffmpeg
 
-# Pin numpy LAST so it holds after all other installs
-RUN /venv/main/bin/pip install numpy==1.26.4
-
 # Create model directories for Wan workflow
 RUN mkdir -p /opt/workspace-internal/ComfyUI/models/diffusion_models \
              /opt/workspace-internal/ComfyUI/models/text_encoders \
