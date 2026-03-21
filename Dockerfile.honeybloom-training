@@ -1,0 +1,48 @@
+# honeybloom-training: FLUX LoRA training with AI-Toolkit
+# Base: nvidia/cuda:12.6.0-devel-ubuntu22.04 (bare CUDA, no conda)
+# Purpose: Identity creation — Metal Cycle 3 (LoRA training)
+#
+# v1: Python 3.10, PyTorch cu126, AI-Toolkit (35b1cde3), FC Perfect Base (diffusers from HF staging)
+#
+# NOT INCLUDED: Dataset, config YAML (per-job)
+
+FROM nvidia/cuda:12.6.0-devel-ubuntu22.04
+
+ARG HF_TOKEN
+
+# System packages
+RUN apt-get update && \
+    apt-get install -y python3.10 python3.10-venv python3.10-dev libgl1-mesa-glx git git-lfs wget && \
+    rm -rf /var/lib/apt/lists/*
+
+# Create workspace
+WORKDIR /workspace
+
+# Python venv + PyTorch cu126 (separate from PyPI packages — can't mix indexes)
+RUN python3.10 -m venv /workspace/venv
+RUN /workspace/venv/bin/pip install --upgrade pip && \
+    /workspace/venv/bin/pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+
+# AI-Toolkit — pinned to 35b1cde3 (validated JOB008/JOB009)
+RUN git clone https://github.com/ostris/ai-toolkit.git && \
+    cd ai-toolkit && \
+    git checkout 35b1cde3cb7b0151a51bf8547bab0931fd57d72d && \
+    git submodule update --init --recursive && \
+    /workspace/venv/bin/pip install -r requirements.txt
+
+# HuggingFace + diffusers (from default PyPI, not cu126 index)
+RUN /workspace/venv/bin/pip install huggingface_hub diffusers safetensors accelerate
+
+# FC Perfect Base (pre-converted diffusers format, staged on private HF repo)
+# Phase 1 (one-time): conversion done on Vast.ai 2026-03-21, uploaded to deepakpatnaik1/fc-perfect-base-diffusers
+# Phase 2 (this step): download the pre-converted directory via Python API (huggingface-cli may not be on PATH)
+# Shell expands ${HF_TOKEN} (double quotes), then Python receives the literal token string
+RUN /workspace/venv/bin/python -c "from huggingface_hub import snapshot_download; snapshot_download('deepakpatnaik1/fc-perfect-base-diffusers', local_dir='/workspace/flux-dev-diffusers', token='${HF_TOKEN}')"
+
+# Create standard directories
+RUN mkdir -p /workspace/datasets /workspace/output
+
+# Default shell with venv activated
+ENV PATH="/workspace/venv/bin:$PATH"
+
+WORKDIR /workspace/ai-toolkit
