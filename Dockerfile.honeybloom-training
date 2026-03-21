@@ -2,13 +2,11 @@
 # Base: nvidia/cuda:12.6.0-devel-ubuntu22.04 (bare CUDA, no conda)
 # Purpose: Identity creation — Metal Cycle 3 (LoRA training)
 #
-# v1: Python 3.10, PyTorch cu126, AI-Toolkit (35b1cde3), FC Perfect Base (diffusers from HF staging)
+# v1: Python 3.10, PyTorch cu126, AI-Toolkit (35b1cde3)
 #
-# NOT INCLUDED: Dataset, config YAML (per-job)
+# NOT INCLUDED: Dataset, config YAML, FC Perfect Base (downloaded at runtime via from_pretrained)
 
 FROM nvidia/cuda:12.6.0-devel-ubuntu22.04
-
-ARG HF_TOKEN
 
 # System packages
 RUN apt-get update && \
@@ -33,11 +31,9 @@ RUN git clone https://github.com/ostris/ai-toolkit.git && \
 # HuggingFace + diffusers (from default PyPI, not cu126 index)
 RUN /workspace/venv/bin/pip install huggingface_hub diffusers safetensors accelerate
 
-# FC Perfect Base (pre-converted diffusers format, staged on private HF repo)
-# Phase 1 (one-time): conversion done on Vast.ai 2026-03-21, uploaded to deepakpatnaik1/fc-perfect-base-diffusers
-# Phase 2 (this step): download the pre-converted directory via Python API (huggingface-cli may not be on PATH)
-# Shell expands ${HF_TOKEN} (double quotes), then Python receives the literal token string
-RUN /workspace/venv/bin/python -c "from huggingface_hub import snapshot_download; snapshot_download('deepakpatnaik1/fc-perfect-base-diffusers', local_dir='/workspace/flux-dev-diffusers', token='${HF_TOKEN}')"
+# Enable hf_xet for fast HuggingFace downloads (built into huggingface_hub >= 0.32.0)
+# Do NOT use hf_transfer — it's deprecated
+ENV HF_XET_HIGH_PERFORMANCE=1
 
 # Create standard directories
 RUN mkdir -p /workspace/datasets /workspace/output
